@@ -1,10 +1,10 @@
 #!/bin/bash
 
 #SBATCH -J trim
-#SBATCH -c 32
+#SBATCH -c 4
 #SBATCH --error=trim.err
 #SBATCH --output=trim.out
-#SBATCH --time=6:00:00
+#SBATCH --time=2:00:00
 #SBATCH --mem-per-cpu=2G
 
 
@@ -23,7 +23,7 @@
 ## specify path to where trimmomatic was downloaded and unpacked
 trimmomatic_dir=/home/users/gorelica/install/Trimmomatic-0.39
 
-for f in $(ls *_1.fq.gz | sed 's/_1.fq.gz//' | sort -u)
+for f in $(ls *_R1_001.fastq.gz | sed 's/_R1_001.fastq.gz//' | sort -u)
 do
     trim1_paired=${f}_1_paired.fq.gz
     trim2_paired=${f}_2_paired.fq.gz
@@ -31,7 +31,7 @@ do
     trim2_unpaired=${f}_2_unpaired.fq.gz
 
     if [ ! -f $trim1_paired ]; then
-        java -jar $trimmomatic_dir/trimmomatic-0.39.jar PE -phred33 ${f}_1.fq.gz ${f}_2.fq.gz $trim1_paired $trim1_unpaired $trim2_paired $trim2_unpaired ILLUMINACLIP:$trimmomatic_dir/adapters/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:35
+        java -jar $trimmomatic_dir/trimmomatic-0.39.jar PE -phred33 ${f}_R1_001.fastq.gz ${f}_R2_001.fastq.gz $trim1_paired $trim1_unpaired $trim2_paired $trim2_unpaired ILLUMINACLIP:$trimmomatic_dir/adapters/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:35
     fi
 done
 

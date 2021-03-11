@@ -1,11 +1,12 @@
 #!/bin/bash
 
 #SBATCH -J bowtie2
-#SBATCH -c 32
+#SBATCH -c 5
 #SBATCH --error=bowtie2.err
 #SBATCH --output=bowtie2.out
-#SBATCH --time=24:00:00
+#SBATCH --time=8:00:00
 #SBATCH --mem-per-cpu=2G
+
 
 ## Summary:
 ## This script expects paired-end reads which have been run through trimmomatic to remove adapter sequences. 
@@ -20,25 +21,43 @@
 ## 5. Remove temporary unsorted BAM 
 
 
+## NB, samtools flag:
+## not primary alignment (0x100)
+## read fails platform/vendor quality checks (0x200)
+## read is PCR or optical duplicate (0x400)
+## supplementary alignment (0x800)
+
+
 ## load required modules
 module load biology
 module load bowtie2
 module load samtools
+touch read_counts.txt
+
 
 ## specify the reference genome (needs to be indexed using bowtie2)
 ref=$GROUP_HOME/assemblies/GRCh38/GRCh38
-
 for f in $(ls *_1_paired.fq.gz | sed 's/_1_paired.fq.gz//' | sort -u)
 do
-    unsorted_bam=${f}.unsorted.bam
-    sorted_bam=${f}.bam
-    index=${f}.bam.bai
+    fq1=${f}_1_paired.fq.gz
+    fq2=${f}_2_paired.fq.gz
+    index=bams/${f}.bam.bai
+    bam_original=bams/${f}.original.bam
+    bam_original_sorted=bams/${f}.original.sorted.bam
+    bam_original_sorted_rmdup=bams/${f}.original.sorted.rmdup.bam
 
     if [ ! -f $index ]; then
-        bowtie2 -p 4 -x $ref -1 ${f}_1_paired.fq.gz -2 ${f}_2_paired.fq.gz | samtools view -hbS -F 4- > $unsorted_bam
-        samtools sort -o $sorted_bam $unsorted_bam
-        samtools index $sorted_bam
-        rm $unsorted_bam
+        bowtie2 -p 8 -x $ref -1 $fq1 -2 $fq2 | samtools view -hbS -F 3840- > $bam_original
+        reads_orig=$(samtools view -c $bam_original)
+        samtools sort -o $bam_original_sorted $bam_original
+        samtools rmdup $bam_original_sorted $bam_original_sorted_rmdup
+        reads_rmdup=$(samtools view -c $bam_original_sorted_rmdup)
+        samtools view -hbS -F 4- $bam_original_sorted_rmdup > ${f}.bam
+        reads_mapped=$(samtools view -c ${f}.bam) 
+        printf '%s\t%s\t%s\t%s\n' $reads_orig $reads_rmdup $reads_mapped $f >> read_counts.txt
+        samtools index ${f}.bam
+
+        rm $bam_original_sorted; rm $bam_original_sorted_rmdup
     fi
 done
 

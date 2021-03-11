@@ -1,10 +1,10 @@
 #!/bin/bash
 
-#SBATCH -J bin
+#SBATCH -J depth
 #SBATCH -c 2
-#SBATCH --error=bin.err
-#SBATCH --output=bin.out
-#SBATCH --time=2:00:00
+#SBATCH --error=depth.err
+#SBATCH --output=depth.out
+#SBATCH --time=6:00:00
 #SBATCH --mem-per-cpu=2G
 #SBATCH -p jgreiter
 
@@ -18,12 +18,11 @@
 # Use bioconda to install mosdepth: conda install -c bioconda mosdepth 
 # PMID: 29096012
 
-cd /scratch/groups/jgreiter/bams/misc
 
 ## Make sure bam files are indexed!
-for f in $(ls *.original.sorted.rmdup.bam | sed 's/.original.sorted.rmdup.bam//' | sort -u)
+for f in $(ls *.refiltered.bam | sed 's/.refiltered.bam//' | sort -u)
 do
-    mosdepth -t 4 --mapq 10 --fast-mode -n --by 500000 ${f}.original.sorted.rmdup ${f}.original.sorted.rmdup.bam
+    mosdepth -t 4 --mapq 10 --fast-mode -n --by 500000 ${f} ${f}.refiltered.bam
 done
 
 
