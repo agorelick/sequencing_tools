@@ -4,7 +4,7 @@
 #SBATCH -c 20
 #SBATCH --error=bowtie2.err
 #SBATCH --output=bowtie2.out
-#SBATCH --time=12:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --mem-per-cpu=2G
 
 ## Summary:
@@ -34,10 +34,13 @@ suffix2='_R2.fastq.gz'
 ## for each pair of FASTQs for a sample, use the filename prefix based on the first read file, then run bowtie2/samtools for the pair of files.
 for f in $(ls *$suffix1 | sed "s/$suffix1//" | sort -u)
 do
+
+    ## define the names of the output files to be generated
     unsorted_bam=${f}.unsorted.bam
     sorted_bam=${f}.bam
     index=${f}.bam.bai
 
+    ## if the samtools index file (e.g. FILE.bam.bai) does not exist, assume bowtie2 was not run on this file yet, and run it (avoids overwriting)
     if [ ! -f $index ]; then
         ## here we run bowtie2 with 4 parallel processes, and directly pipe the results to samtools, which using the -F 4- argument filters out reads that are unmapped.
         bowtie2 -p 4 -x $ref -1 ${f}${suffix1} -2 ${f}${suffix2} | samtools view -hbS -F 4 > $unsorted_bam
