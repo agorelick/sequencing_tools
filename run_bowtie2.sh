@@ -2,10 +2,13 @@
 
 #SBATCH -J bowtie2
 #SBATCH -c 20
-#SBATCH --error=bowtie2.err
+#SBATCH --error=bowtie2.out
 #SBATCH --output=bowtie2.out
-#SBATCH --time=2-00:00:00
+#SBATCH --time=3-00:00:00
 #SBATCH --mem-per-cpu=2G
+#SBATCH --mail-type=FAIL,BEGIN,END
+#SBATCH --mail-user=gorelica@stanford.edu
+#SBATCH -p jgreiter
 
 ## Summary:
 ## This script executes the following workflow on all files for which an indexed BAM does not already exist:
@@ -25,7 +28,7 @@ module load bowtie2
 module load samtools
 
 ## specify the reference genome (needs to have been indexed using bowtie2)
-ref=$GROUP_HOME/assemblies/GRCh38/GRCh38
+ref=$GROUP_HOME/assemblies/hg19/hg19
 
 ## modify these to suit the filenames for paired-end FASTQ files
 suffix1='_R1.fastq.gz'
@@ -42,7 +45,8 @@ do
 
     ## if the samtools index file (e.g. FILE.bam.bai) does not exist, assume bowtie2 was not run on this file yet, and run it (avoids overwriting)
     if [ ! -f $index ]; then
-        ## here we run bowtie2 with 4 parallel processes, and directly pipe the results to samtools, which using the -F 4- argument filters out reads that are unmapped.
+
+        ## here we run bowtie2 with 4 parallel processes, and directly pipe the results to samtools, which using the -F 4 argument filters out reads that are unmapped.
         bowtie2 -p 4 -x $ref -1 ${f}${suffix1} -2 ${f}${suffix2} | samtools view -hbS -F 4 > $unsorted_bam
         samtools sort -o $sorted_bam $unsorted_bam
         samtools index $sorted_bam
