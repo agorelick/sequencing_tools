@@ -1,28 +1,31 @@
 #!/bin/bash
 
 #SBATCH -J depth
-#SBATCH -c 2
 #SBATCH --error=depth.err
 #SBATCH --output=depth.out
 #SBATCH --time=6:00:00
-#SBATCH --mem-per-cpu=2G
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=12G
 #SBATCH -p jgreiter
 
-# This script invokes a software called mosdepth to calculate depth of coverage for each bam file with the given filename suffix. The options provided are for: 
-# (1) running with 4 threads
-# (2) only consider reads mapped with MAPQ = 10+ (meaning <= 10% likelihood read is incorrectly mapped)
-# (3) Not sure, run faster?
-# (4) Don't print coverage for EVERY basepair
-# (5) Get coverage in 500kb tiles
+# This script invokes a software called featureCounts to quickly count the number of PE reads in a BAM falling in predefined regions (from a GTF file)
+# In the GTF file, I split hg19 into 100KB bins.
 #
-# Use bioconda to install mosdepth: conda install -c bioconda mosdepth 
-# PMID: 29096012
+# install Subread to get the 'featureCounts' software, and make sure it is in your $PATH (or ammend the line below to its absolute path)
+# http://bioinf.wehi.edu.au/featureCounts/
+# PMID: 24227677 
 
+module load biology
+module load samtools
 
-## Make sure bam files are indexed!
-for f in $(ls *.refiltered.bam | sed 's/.refiltered.bam//' | sort -u)
+for f in $(ls *_PS.bam | sed 's/_PS.bam//' | sort -u)
 do
-    mosdepth -t 4 --mapq 10 --fast-mode -n --by 500000 ${f} ${f}.refiltered.bam
+    if [ ! -f ${f}_counts_100kb.txt ]; then
+        ## NB: using 'samtools view -q 20' to filter out poorly mapping reads (MAPQ < 20) and then pipe the result to featureCounts
+        samtools view -h -q 20 ${f}_PS.bam | featureCounts -p -a hg19_100kb_regions.gtf -F SAF -o ${f}_counts_100kb.txt
+    fi
 done
 
 
